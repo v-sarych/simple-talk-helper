@@ -1,2 +1,3 @@
 /.vs
 /models
+__pycache__/
