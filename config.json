@@ -1,0 +1,35 @@
+{
+
+      "asr": {
+        "model_name": "large-v2",
+        "model_path": "./models/whisper",
+        "device": "cuda",
+        "compute_type": "float16",
+        "batch_size": 16
+      },
+      "diarization": {
+        "model_name": "pyannote/speaker-diarization-3.1",
+        "segmentation_model": "pyannote/segmentation-3.0",
+        "model_path": "./models/pyannote",
+        "device": "cuda",
+        "min_speakers": null,
+        "max_speakers": null
+      },
+
+    "llm": {
+      "api_key": "",
+      "base_url": "https://api.gptunnel.ru/v1",
+      "model": "gpt-4o-mini",
+      "temperature": 0.7,
+      "max_tokens": 1000
+    },
+    "audio": {
+      "sample_rate": 16000,
+      "chunk_duration_ms": 1000,
+      "silence_threshold": 1.5
+    }
+    ,
+    "prompt": [
+        ""
+    ]
+  }
