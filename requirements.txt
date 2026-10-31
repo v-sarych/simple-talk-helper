@@ -1,0 +1,12 @@
+# Захват звука: микрофоны и loopback десктопа (soundcard)
+numpy>=1.26
+soundcard>=0.4.6
+
+# Распознавание речи
+faster-whisper>=1.2
+
+# Диаризация (pyannote) и её зависимости
+pyannote.audio>=4.0
+torch>=2.0
+torchaudio>=2.0
+huggingface-hub>=0.30
