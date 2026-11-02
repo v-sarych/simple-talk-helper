@@ -83,12 +83,16 @@ class TalkHelperApp(tk.Tk):
             messagebox.showinfo("Attention", "Select device")
             return
 
+        def _log_handler(info):
+            messagebox.showinfo("Information", info)
+
         self._is_stopped = False
         threading.Thread(
             target=self._voice_recognition.loop,
-            args=(self._audio_source_combox.get(), self._voice_data_queue.put),
+            args=(self._audio_source_combox.get(), self._voice_data_queue.put, _log_handler),
             daemon=True,
         ).start()
+
 
     def _stop_button_handler(self):
         self._is_stopped = True

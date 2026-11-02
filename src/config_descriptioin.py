@@ -43,8 +43,7 @@ class LLMConfig:
 @dataclass
 class AudioConfig:
     sample_rate: int = 16000
-    chunk_duration_ms: int = 1000
-    silence_threshold: float = 1.5
+    block_size: int = 256
 
 @dataclass
 class AppConfig:

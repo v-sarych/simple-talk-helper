@@ -1,5 +1,6 @@
 import time
 import soundcard
+import numpy as np
 from config_descriptioin import ASRConfig, AudioConfig, DiarizationConfig
 
 
@@ -20,12 +21,24 @@ class VoiceRecognition:
         self.audio_config = audio_config
         self._is_stopped = True
 
-    def loop(self, device: str, voice_recognized_callback):
+    def loop(self, device: str, voice_recognized_callback, log_callback):
         self._is_stopped = False
-        while not self._is_stopped:
-            voice_recognized_callback("looped " + device)
 
-            time.sleep(0.5)
+        audio_source = soundcard.get_microphone(device, include_loopback=True)
+        try:
+            with audio_source.recorder(self.audio_config.sample_rate, 2 if audio_source.isloopback else 1, self.audio_config.block_size) as recorder, \
+                soundcard.default_speaker().player(self.audio_config.sample_rate, 1, self.audio_config.block_size) as speaker:
+                while not self._is_stopped:
+                    voice_recognized_callback("looped " + device)
+                    time.sleep(0.5)
+                    recorded_data = recorder.record()
+                    if audio_source.isloopback:
+                        recorded_data.mean(axis=1).reshape(-1, 1).astype(np.float32) 
+
+                    speaker.play(recorded_data)
+        except:
+            log_callback("Audio stream opening error, probably unsupported sample rate")
+
 
     def stop_loop(self):
         self._is_stopped = True
@@ -36,7 +49,5 @@ class VoiceRecognition:
 
         for mic in soundcard.all_microphones(include_loopback=True):
             sources.append(mic.name)
-        for speaker in soundcard.all_speakers():
-            sources.append(speaker.name)
 
         return sources
