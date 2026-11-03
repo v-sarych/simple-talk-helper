@@ -1,36 +1,38 @@
 import json
 from pathlib import Path
-from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from dataclasses import dataclass
+
+
+@dataclass
+class SherpaOnnxConfig:
+    encoder: str
+    decoder: str
+    joiner: str
+    tokens: str
+    num_threads: int = 2
+    provider: str = "cpu"
+    decoding_method: str = "greedy_search"
+    sample_rate: float = 16000
+    feature_dim: int = 80
+    enable_endpoint_detection: bool = True
+    rule1_min_trailing_silence: float = 2.4
+    rule2_min_trailing_silence: float = 1.2
+    rule3_min_utterance_length: float = 20.0
+    debug: bool = False
+
+    def __post_init__(self):
+        if self.provider not in ["cpu", "cuda", "auto"]:
+            raise ValueError(f"provider must be 'cpu', 'cuda' or 'auto', got: {self.provider}")
+
+        valid_methods = ["greedy_search", "modified_beam_search"]
+        if self.decoding_method not in valid_methods:
+            raise ValueError(f"decoding_method must be one of {valid_methods}, got: {self.decoding_method}")
+
 
 @dataclass
 class ASRConfig:
-    model_name: str
-    model_path: str
-    device: str  # cuda or cpu
-    compute_type: str  # float16, int8, int16, float32
-    batch_size: int = 16
-    
-    def __post_init__(self):
-        if self.device not in ["cuda", "cpu"]:
-            raise ValueError(f"device must be 'cuda' or 'cpu', got: {self.device}")
-        
-        valid_types = ["float16", "int8", "int16", "float32"]
-        if self.compute_type not in valid_types:
-            raise ValueError(f"compute_type must be one of {valid_types}, got: {self.compute_type}")
+    sherpa_onnx: SherpaOnnxConfig
 
-@dataclass
-class DiarizationConfig:
-    model_name: str
-    segmentation_model: str
-    model_path: str
-    device: str = "cuda"
-    min_speakers: Optional[int] = None
-    max_speakers: Optional[int] = None
-    
-    def __post_init__(self):
-        if self.device not in ["cuda", "cpu"]:
-            raise ValueError(f"device must be 'cuda' or 'cpu', got: {self.device}")
 
 @dataclass
 class LLMConfig:
@@ -40,10 +42,12 @@ class LLMConfig:
     temperature: float
     max_tokens: int
 
+
 @dataclass
 class AudioConfig:
     sample_rate: int = 16000
     block_size: int = 256
+
 
 @dataclass
 class AppConfig:
@@ -51,28 +55,26 @@ class AppConfig:
     prompt: str
     audio: AudioConfig
     asr: ASRConfig
-    diarization: DiarizationConfig
-    
+
     @classmethod
     def from_json(cls, config_path: str) -> 'AppConfig':
         config_path = Path(config_path)
-        
+
         if not config_path.exists():
             raise FileNotFoundError(config_path)
-        
+
         with open(config_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-        
-        asr_config = ASRConfig(**data['asr'])
-        diarization_config = DiarizationConfig(**data['diarization'])
+
+        sherpa_onnx_config = SherpaOnnxConfig(**data['asr']['sherpa_onnx'])
+        asr_config = ASRConfig(sherpa_onnx=sherpa_onnx_config)
         llm_config = LLMConfig(**data['llm'])
         prompts_config = "\n".join(data['prompt'])
         audio_config = AudioConfig(**data['audio'])
-        
+
         return AppConfig(
             llm=llm_config,
             prompt=prompts_config,
             audio=audio_config,
-            asr=asr_config,
-            diarization=diarization_config
+            asr=asr_config
         )

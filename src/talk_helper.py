@@ -27,7 +27,7 @@ class TalkHelperApp(tk.Tk):
         self._voice_data_queue = Queue()
         self._init_ui()
 
-        self._voice_recognition = VoiceRecognition(app_config.asr, app_config.diarization, app_config.audio)
+        self._voice_recognition = VoiceRecognition(app_config.asr, app_config.audio)
 
         self.after(30, self._pull_voice_data)
 

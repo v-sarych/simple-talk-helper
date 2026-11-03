@@ -1,19 +1,21 @@
 {
-
       "asr": {
-        "model_name": "large-v2",
-        "model_path": "E:\\AI_MODELS",
-        "device": "cuda",
-        "compute_type": "float16",
-        "batch_size": 16
-      },
-      "diarization": {
-        "model_name": "pyannote/speaker-diarization-3.1",
-        "segmentation_model": "pyannote/segmentation-3.0",
-        "model_path": "E:\\AI_MODELS",
-        "device": "cuda",
-        "min_speakers": null,
-        "max_speakers": null
+        "sherpa_onnx": {
+          "encoder": "E:\\AI_MODELS\\sherpa_onnx\\encoder-epoch-75-avg-11-chunk-16-left-128.int8.onnx",
+          "decoder": "E:\\AI_MODELS\\sherpa_onnx\\decoder-epoch-75-avg-11-chunk-16-left-128.onnx",
+          "joiner": "E:\\AI_MODELS\\sherpa_onnx\\joiner-epoch-75-avg-11-chunk-16-left-128.int8.onnx",
+          "tokens": "E:\\AI_MODELS\\sherpa_onnx\\tokens.txt",
+          "num_threads": 2,
+          "provider": "cuda",
+          "decoding_method": "greedy_search",
+          "sample_rate": 16000,
+          "feature_dim": 80,
+          "enable_endpoint_detection": true,
+          "rule1_min_trailing_silence": 1.5,
+          "rule2_min_trailing_silence": 0.8,
+          "rule3_min_utterance_length": 10.0,
+          "debug": false
+        }
       },
 
     "llm": {
