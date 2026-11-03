@@ -2,7 +2,7 @@
 
       "asr": {
         "model_name": "large-v2",
-        "model_path": "./models/whisper",
+        "model_path": "E:\\AI_MODELS",
         "device": "cuda",
         "compute_type": "float16",
         "batch_size": 16
@@ -10,7 +10,7 @@
       "diarization": {
         "model_name": "pyannote/speaker-diarization-3.1",
         "segmentation_model": "pyannote/segmentation-3.0",
-        "model_path": "./models/pyannote",
+        "model_path": "E:\\AI_MODELS",
         "device": "cuda",
         "min_speakers": null,
         "max_speakers": null
@@ -25,7 +25,7 @@
     },
     "audio": {
       "sample_rate": 16000,
-      "block_size": 256
+      "block_size": 512
     }
     ,
     "prompt": [

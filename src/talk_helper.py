@@ -1,6 +1,6 @@
-import queue
-import threading
+from queue import Queue 
 import tkinter as tk
+import threading
 from tkinter import ttk, messagebox
 from ui_components import AutoScrollText
 from voice_recognition import VoiceRecognition
@@ -8,7 +8,7 @@ from config_descriptioin import AppConfig
 
 
 class TalkHelperApp(tk.Tk):
-    _is_stopped: bool
+    _audio_recognition_cancellation_token: threading.Event
     _voice_recognition: VoiceRecognition
     _container: ttk.PanedWindow
     _toolbar: ttk.Frame
@@ -16,12 +16,15 @@ class TalkHelperApp(tk.Tk):
     _translation_panel: AutoScrollText
     _tips_panel: AutoScrollText
     _audio_source_combox: ttk.Combobox
-    _voice_data_queue: queue.Queue
+    _voice_data_queue: Queue
 
     def __init__(self, app_config: AppConfig):
         super().__init__()
-        self._is_stopped = True
-        self._voice_data_queue = queue.Queue()
+
+        self._audio_recognition_cancellation_token = threading.Event()
+        self._audio_recognition_cancellation_token.set()
+        
+        self._voice_data_queue = Queue()
         self._init_ui()
 
         self._voice_recognition = VoiceRecognition(app_config.asr, app_config.diarization, app_config.audio)
@@ -76,7 +79,8 @@ class TalkHelperApp(tk.Tk):
         self._audio_source_combox["values"] = VoiceRecognition.get_audio_sources()
 
     def _start_button_handler(self):
-        if not self._is_stopped:
+        if not self._audio_recognition_cancellation_token.is_set():
+            messagebox.showinfo("Attention", "Loop already started")
             return
 
         if not self._audio_source_combox.get() or self._audio_source_combox.get() == "devices":
@@ -86,17 +90,15 @@ class TalkHelperApp(tk.Tk):
         def _log_handler(info):
             messagebox.showinfo("Information", info)
 
-        self._is_stopped = False
+        self._audio_recognition_cancellation_token.clear()
         threading.Thread(
             target=self._voice_recognition.loop,
-            args=(self._audio_source_combox.get(), self._voice_data_queue.put, _log_handler),
+            args=(self._audio_source_combox.get(), self._voice_data_queue.put, _log_handler, self._audio_recognition_cancellation_token),
             daemon=True,
         ).start()
 
-
     def _stop_button_handler(self):
-        self._is_stopped = True
-        self._voice_recognition.stop_loop()
+        self._audio_recognition_cancellation_token.set()
 
     def _pull_voice_data(self):
         while not self._voice_data_queue.empty():
