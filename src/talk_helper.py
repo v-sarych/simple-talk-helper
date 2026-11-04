@@ -52,6 +52,7 @@ class TalkHelperApp(tk.Tk):
         background = "#1e1e1e"
         foreground = "#d4d4d4"
         field_background = "#2d2d2d"
+        button_background = "#3c3c3c"
         border = "#4a4a4a"
         selection_background = "#264f78"
 
@@ -76,27 +77,49 @@ class TalkHelperApp(tk.Tk):
             bordercolor=border,
         )
         style.map("TButton", background=[("active", border)])
+        style.layout(
+            "Vertical.TScrollbar",
+            [
+                (
+                    "Vertical.Scrollbar.trough",
+                    {
+                        "sticky": "ns",
+                        "children": [
+                            ("Vertical.Scrollbar.thumb", {"sticky": "nswe"})
+                        ],
+                    },
+                )
+            ],
+        )
         style.configure(
             "TScrollbar",
-            background=field_background,
+            width=10,
+            gripsize=0,
+            background=button_background,
             troughcolor=background,
-            arrowcolor=foreground,
             bordercolor=background,
+            lightcolor=background,
+            darkcolor=background,
         )
         style.map(
             "TScrollbar",
-            background=[("disabled", field_background)],
+            background=[("disabled", button_background)],
             troughcolor=[("disabled", background)],
-            arrowcolor=[("disabled", foreground)],
             bordercolor=[("disabled", background)],
+            lightcolor=[("disabled", background)],
+            darkcolor=[("disabled", background)],
         )
         style.configure(
             "TCombobox",
-            background=field_background,
+            padding=(6, 4),
+            arrowsize=14,
+            background=button_background,
             fieldbackground=field_background,
             foreground=foreground,
             arrowcolor=foreground,
             bordercolor=border,
+            lightcolor=button_background,
+            darkcolor=button_background,
         )
         style.map(
             "TCombobox",
