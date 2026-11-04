@@ -9,6 +9,8 @@ import time
 
 RECOGNITION_DATA_PULLING_RATE = 50
 
+AutoScrollText_MAX_CHARS = 2000
+
 class TalkHelperApp(tk.Tk):
     _audio_recognition_cancellation_token: threading.Event
     _voice_recognition: VoiceRecognition
@@ -136,9 +138,9 @@ class TalkHelperApp(tk.Tk):
         self._container = ttk.PanedWindow(self, orient="horizontal")
         self._container.pack(fill="both", expand=True, padx=8, pady=8)
 
-        self._speech_panel = AutoScrollText(self._container, "AudioRecognition")
-        self._translation_panel = AutoScrollText(self._container, "Translation")
-        self._tips_panel = AutoScrollText(self._container, "Tips")
+        self._speech_panel = AutoScrollText(self._container, "AudioRecognition", max_chars=AutoScrollText_MAX_CHARS)
+        self._translation_panel = AutoScrollText(self._container, "Translation", max_chars=AutoScrollText_MAX_CHARS)
+        self._tips_panel = AutoScrollText(self._container, "Tips", max_chars=AutoScrollText_MAX_CHARS)
 
         for panel in (self._speech_panel, self._translation_panel, self._tips_panel):
             self._container.add(panel, weight=1)
@@ -201,7 +203,7 @@ class TalkHelperApp(tk.Tk):
         for text in self._audio_recognition_data.values():
             full_text+=text
         self._speech_panel.clear()
-        self._speech_panel.append(full_text) 
+        self._speech_panel.append(full_text[-AutoScrollText_MAX_CHARS:]) 
 
         self.after(RECOGNITION_DATA_PULLING_RATE, self._pull_voice_data)
 

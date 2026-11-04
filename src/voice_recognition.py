@@ -102,7 +102,7 @@ class VoiceRecognition:
                     else:
                         partial_text = self._sherpa_recognizer.get_result(recognizing_stream)
                         if partial_text:
-                            voice_recognized_callback(RecognizedTextBatch(endpoint_id, partial_text + "<>"))
+                            voice_recognized_callback(RecognizedTextBatch(endpoint_id, partial_text))
 
                 time.sleep(0.03)
 
