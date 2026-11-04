@@ -4,8 +4,13 @@ import numpy as np
 import threading
 import sherpa_onnx
 from queue import Queue 
+from dataclasses import dataclass
 from config_descriptioin import ASRConfig, AudioConfig, SherpaOnnxConfig
 
+@dataclass
+class RecognizedTextBatch:
+    id: int
+    text: str
 
 class VoiceRecognition:
     _asr_config: ASRConfig
@@ -44,7 +49,7 @@ class VoiceRecognition:
     def loop(self, device: str, voice_recognized_callback, log_callback, cancellation_token: threading.Event):
         _audio_queue = Queue()
         
-        voice_recognized_callback("Audio loop started\n")
+        voice_recognized_callback(RecognizedTextBatch(0, "\nAudio loop started\n"))
         
         threading.Thread(
             target=self._recognition_loop,
@@ -67,11 +72,12 @@ class VoiceRecognition:
 
             
     def _recognition_loop(self, _audio_queue: Queue, voice_recognized_callback, log_callback, cancellation_token: threading.Event):
-        voice_recognized_callback("Recognition loop started\n")
+        voice_recognized_callback(RecognizedTextBatch(1, "Recognition loop started\n"))
 
         recognizing_stream: sherpa_onnx.OnlineStream = self._sherpa_recognizer.create_stream()
         
         with soundcard.default_speaker().player(self._audio_config.sample_rate, 1, self._audio_config.block_size) as speaker:
+            endpoint_id = 2
             while not cancellation_token.is_set():
                 audio_batches = []
                 while not _audio_queue.empty():
@@ -84,20 +90,21 @@ class VoiceRecognition:
                     audio_batch = audio_batch.flatten().astype(np.float32)
 
                     recognizing_stream.accept_waveform(self._asr_config.sherpa_onnx.sample_rate, audio_batch)
-                    if self._sherpa_recognizer.is_ready(recognizing_stream):
+                    while self._sherpa_recognizer.is_ready(recognizing_stream):
                         self._sherpa_recognizer.decode_stream(recognizing_stream)
 
                     if self._sherpa_recognizer.is_endpoint(recognizing_stream):
                         final_text = self._sherpa_recognizer.get_result(recognizing_stream)
                         if final_text:
-                            voice_recognized_callback(final_text + "<>")
+                            voice_recognized_callback(RecognizedTextBatch(endpoint_id, final_text + "<>"))
                             self._sherpa_recognizer.reset(recognizing_stream)
+                            endpoint_id += 1
                     else:
-                        time.sleep(0.02)
+                        partial_text = self._sherpa_recognizer.get_result(recognizing_stream)
+                        if partial_text:
+                            voice_recognized_callback(RecognizedTextBatch(endpoint_id, partial_text + "<>"))
 
-                    # partial_text = self._sherpa_recognizer.get_result_all(recognizing_stream)
-                    # if partial_text:
-                    #     print(f"[Partial] {partial_text}\n")
+                time.sleep(0.03)
 
                     
 

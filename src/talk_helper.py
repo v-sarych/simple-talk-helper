@@ -5,6 +5,7 @@ from tkinter import ttk, messagebox
 from ui_components import AutoScrollText
 from voice_recognition import VoiceRecognition
 from config_descriptioin import AppConfig
+import time
 
 
 class TalkHelperApp(tk.Tk):
@@ -17,25 +18,27 @@ class TalkHelperApp(tk.Tk):
     _tips_panel: AutoScrollText
     _audio_source_combox: ttk.Combobox
     _voice_data_queue: Queue
+    _audio_recognition_data: dict[int, str]
 
     def __init__(self, app_config: AppConfig):
         super().__init__()
 
         self._audio_recognition_cancellation_token = threading.Event()
         self._audio_recognition_cancellation_token.set()
-        
-        self._voice_data_queue = Queue()
-        self._init_ui()
 
+        self._audio_recognition_data = dict()
+        self._voice_data_queue = Queue()
         self._voice_recognition = VoiceRecognition(app_config.asr, app_config.audio)
+
+        self._init_ui()
 
         self.after(30, self._pull_voice_data)
 
     def _init_ui(self):
         self.title("simple-talk-helper")
         self.geometry(
-            f"{self.winfo_screenwidth() * 2 // 5}x"
-            f"{self.winfo_screenheight() * 2 // 5}"
+            f"{self.winfo_screenwidth() * 2 // 3}x"
+            f"{self.winfo_screenheight() * 2 // 4}"
         )
         self.minsize(
             self.winfo_screenwidth() // 4,
@@ -87,24 +90,38 @@ class TalkHelperApp(tk.Tk):
             messagebox.showinfo("Attention", "Select device")
             return
 
-        def _log_handler(info):
+        def log_handler(info):
             messagebox.showinfo("Information", info)
 
         self._audio_recognition_cancellation_token.clear()
         threading.Thread(
             target=self._voice_recognition.loop,
-            args=(self._audio_source_combox.get(), self._voice_data_queue.put, _log_handler, self._audio_recognition_cancellation_token),
+            args=(self._audio_source_combox.get(), self._voice_data_queue.put, log_handler, self._audio_recognition_cancellation_token),
             daemon=True,
         ).start()
 
     def _stop_button_handler(self):
         self._audio_recognition_cancellation_token.set()
+        time.sleep(0.2)#waiting until all threads finish and all queues have been handled
+
+        full_text = ""
+        for text in self._audio_recognition_data.values():
+            full_text += text
+        self._audio_recognition_data.clear()
+        self._audio_recognition_data[-1] = full_text
 
     def _pull_voice_data(self):
         while not self._voice_data_queue.empty():
-            self._speech_panel.append_line(self._voice_data_queue.get_nowait())
+            data = self._voice_data_queue.get_nowait()
+            self._audio_recognition_data[data.id] = data.text.lower()
+
+            self._speech_panel.clear()
+            for text in self._audio_recognition_data.values():
+                self._speech_panel.append(text)
+
         self.after(30, self._pull_voice_data)
 
     def _clear_all_button_handler(self):
+        self._audio_recognition_data.clear()
         for panel in (self._speech_panel, self._translation_panel, self._tips_panel):
             panel.clear()
