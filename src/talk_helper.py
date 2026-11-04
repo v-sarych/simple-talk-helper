@@ -116,8 +116,10 @@ class TalkHelperApp(tk.Tk):
             self._audio_recognition_data[data.id] = data.text.lower()
 
             self._speech_panel.clear()
+            full_text = ""
             for text in self._audio_recognition_data.values():
-                self._speech_panel.append(text)
+                full_text+=text
+            self._speech_panel.append(full_text)
 
         self.after(30, self._pull_voice_data)
 

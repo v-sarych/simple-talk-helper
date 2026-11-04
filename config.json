@@ -1,13 +1,13 @@
 {
       "asr": {
         "sherpa_onnx": {
-          "encoder": "E:\\AI_MODELS\\sherpa_onnx\\encoder-epoch-75-avg-11-chunk-16-left-128.int8.onnx",
-          "decoder": "E:\\AI_MODELS\\sherpa_onnx\\decoder-epoch-75-avg-11-chunk-16-left-128.onnx",
-          "joiner": "E:\\AI_MODELS\\sherpa_onnx\\joiner-epoch-75-avg-11-chunk-16-left-128.int8.onnx",
-          "tokens": "E:\\AI_MODELS\\sherpa_onnx\\tokens.txt",
+          "encoder": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\encoder.onnx",
+          "decoder": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\decoder.onnx",
+          "joiner": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\joiner.onnx",
+          "tokens": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\tokens.txt",
           "num_threads": 4,
           "provider": "cpu",
-          "decoding_method": "modified_beam_search",
+          "decoding_method": "greedy_search",
           "sample_rate": 16000,
           "feature_dim": 80,
           "enable_endpoint_detection": true,
