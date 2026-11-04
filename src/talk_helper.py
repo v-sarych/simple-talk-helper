@@ -7,6 +7,7 @@ from voice_recognition import VoiceRecognition
 from config_descriptioin import AppConfig
 import time
 
+RECOGNITION_DATA_PULLING_RATE = 50
 
 class TalkHelperApp(tk.Tk):
     _audio_recognition_cancellation_token: threading.Event
@@ -32,7 +33,7 @@ class TalkHelperApp(tk.Tk):
 
         self._init_ui()
 
-        self.after(30, self._pull_voice_data)
+        self.after(RECOGNITION_DATA_PULLING_RATE, self._pull_voice_data)
 
     def _init_ui(self):
         self.title("simple-talk-helper")
@@ -115,13 +116,13 @@ class TalkHelperApp(tk.Tk):
             data = self._voice_data_queue.get_nowait()
             self._audio_recognition_data[data.id] = data.text.lower()
 
-            self._speech_panel.clear()
-            full_text = ""
-            for text in self._audio_recognition_data.values():
-                full_text+=text
-            self._speech_panel.append(full_text)
+        self._speech_panel.clear()
+        full_text = ""
+        for text in self._audio_recognition_data.values():
+            full_text+=text
+        self._speech_panel.append(full_text) 
 
-        self.after(30, self._pull_voice_data)
+        self.after(RECOGNITION_DATA_PULLING_RATE, self._pull_voice_data)
 
     def _clear_all_button_handler(self):
         self._audio_recognition_data.clear()
