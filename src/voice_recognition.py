@@ -63,7 +63,7 @@ class VoiceRecognition:
                 while not cancellation_token.is_set():
 
                     recorded_data = recorder.record(self._audio_config.block_size)
-                    if audio_source.isloopback:
+                    if audio_source.isloopback:# lobback bag(in windows mostly), to fix i do stereo capture and combine into mono for recognition
                         recorded_data = recorded_data.mean(axis=1).reshape(-1, 1).astype(np.float32) 
 
                     _audio_queue.put(recorded_data)
