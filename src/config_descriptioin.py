@@ -40,6 +40,7 @@ class LLMConfig:
     base_url: str
     model: str
     temperature: float
+    max_tokens: int
     translator_prompt: str
     advisor_prompt: str
 
@@ -53,7 +54,6 @@ class AudioConfig:
 @dataclass
 class AppConfig:
     llm: LLMConfig
-    prompt: str
     audio: AudioConfig
     asr: ASRConfig
 
@@ -70,12 +70,10 @@ class AppConfig:
         sherpa_onnx_config = SherpaOnnxConfig(**data['asr']['sherpa_onnx'])
         asr_config = ASRConfig(sherpa_onnx=sherpa_onnx_config)
         llm_config = LLMConfig(**data['llm'])
-        prompts_config = "\n".join(data['prompt'])
         audio_config = AudioConfig(**data['audio'])
 
         return AppConfig(
             llm=llm_config,
-            prompt=prompts_config,
             audio=audio_config,
             asr=asr_config
         )
