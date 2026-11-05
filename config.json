@@ -1,35 +1,33 @@
 {
-      "asr": {
-        "sherpa_onnx": {
-          "encoder": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\encoder.onnx",
-          "decoder": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\decoder.onnx",
-          "joiner": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\joiner.onnx",
-          "tokens": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\tokens.txt",
-          "num_threads": 4,
-          "provider": "cpu",
-          "decoding_method": "greedy_search",
-          "sample_rate": 16000,
-          "feature_dim": 80,
-          "enable_endpoint_detection": true,
-          "rule1_min_trailing_silence": 2.5,
-          "rule2_min_trailing_silence": 1.5,
-          "rule3_min_utterance_length": 30.0,
-          "debug": false
-        }
-      },
-
-    "llm": {
-      "api_key": "",
-      "base_url": "https://api.gptunnel.ru/v1",
-      "model": "gpt-4o-mini",
-      "temperature": 0.7,
-      "max_tokens": 1000
-    },
-    "audio": {
-      "sample_rate": 44100,
-      "block_size": 1024
-    },
-    "prompt": [
-        ""
-    ]
+  "asr": {
+    "sherpa_onnx": {
+      "encoder": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\encoder.onnx",
+      "decoder": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\decoder.onnx",
+      "joiner": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\joiner.onnx",
+      "tokens": "E:\\AI_MODELS\\sherpa_onnx\\sherpa-onnx-nemotron-3.5-asr-streaming-0.6b-80ms-int8-2026-06-11\\tokens.txt",
+      "num_threads": 4,
+      "provider": "cpu",
+      "decoding_method": "greedy_search",
+      "sample_rate": 16000,
+      "feature_dim": 80,
+      "enable_endpoint_detection": true,
+      "rule1_min_trailing_silence": 2.5,
+      "rule2_min_trailing_silence": 1.5,
+      "rule3_min_utterance_length": 30.0,
+      "debug": false
+    }
+  },
+  "audio": {
+    "sample_rate": 44100,
+    "block_size": 1024
+  },
+  "llm": {
+    "api_key": "",
+    "base_url": "https://api.gptunnel.ru/v1",
+    "model": "gpt-4o-mini",
+    "temperature": 0.7,
+    "max_tokens": 10000,
+    "translator_prompt":"",
+    "advicer_prompt": ""
   }
+}
