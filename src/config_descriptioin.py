@@ -39,7 +39,6 @@ class LLMConfig:
     api_key: str
     base_url: str
     model: str
-    temperature: float
     max_tokens: int
     translator_prompt: str
     advisor_prompt: str

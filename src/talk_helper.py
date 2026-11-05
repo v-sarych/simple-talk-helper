@@ -6,10 +6,18 @@ from ui_components import AutoScrollText
 from voice_recognition import VoiceRecognition
 from config_descriptioin import AppConfig
 import time
+import asyncio
+from speech_translation_advisor import SpeechTranslationAdvisor
+from dataclasses import dataclass
 
-RECOGNITION_DATA_PULLING_RATE = 50
+RECOGNITION_DATA_PULLING_RATE = 0.08
 
 AutoScrollText_MAX_CHARS = 2000
+@dataclass
+class SpeechTranslationAdvice:
+    speech: str = ""
+    translation: str = ""
+    advice: str = ""
 
 class TalkHelperApp(tk.Tk):
     _audio_recognition_cancellation_token: threading.Event
@@ -18,10 +26,11 @@ class TalkHelperApp(tk.Tk):
     _toolbar: ttk.Frame
     _speech_panel: AutoScrollText
     _translation_panel: AutoScrollText
-    _tips_panel: AutoScrollText
+    _advice_panel: AutoScrollText
     _audio_source_combox: ttk.Combobox
     _voice_data_queue: Queue
-    _audio_recognition_data: dict[int, str]
+    _audio_recognition_data: dict[int, SpeechTranslationAdvice]
+    _speech_translation_advisor : SpeechTranslationAdvisor
 
     def __init__(self, app_config: AppConfig):
         super().__init__()
@@ -32,10 +41,14 @@ class TalkHelperApp(tk.Tk):
         self._audio_recognition_data = dict()
         self._voice_data_queue = Queue()
         self._voice_recognition = VoiceRecognition(app_config.asr, app_config.audio)
+        self._speech_translation_advisor = SpeechTranslationAdvisor(app_config.llm)
 
         self._init_ui()
 
-        self.after(RECOGNITION_DATA_PULLING_RATE, self._pull_voice_data)
+        self.after(200, self._start_async_tasks)
+
+    def _start_async_tasks(self):#no concurency in this tasks, because only 1 thread used, in await asyncio guarantee returning to main thread
+        asyncio.create_task(self._pull_voice_data())
 
     def _init_ui(self):
         self.title("simple-talk-helper")
@@ -140,9 +153,9 @@ class TalkHelperApp(tk.Tk):
 
         self._speech_panel = AutoScrollText(self._container, "AudioRecognition", max_chars=AutoScrollText_MAX_CHARS)
         self._translation_panel = AutoScrollText(self._container, "Translation", max_chars=AutoScrollText_MAX_CHARS)
-        self._tips_panel = AutoScrollText(self._container, "Tips", max_chars=AutoScrollText_MAX_CHARS)
+        self._advice_panel = AutoScrollText(self._container, "Tips", max_chars=AutoScrollText_MAX_CHARS)
 
-        for panel in (self._speech_panel, self._translation_panel, self._tips_panel):
+        for panel in (self._speech_panel, self._translation_panel, self._advice_panel):
             self._container.add(panel, weight=1)
 
         self._toolbar = ttk.Frame(self, style="Toolbar.TFrame")
@@ -174,13 +187,13 @@ class TalkHelperApp(tk.Tk):
             messagebox.showinfo("Attention", "Select device")
             return
 
-        def log_handler(info):
-            messagebox.showinfo("Information", info)
+        def error_handler(info):
+            messagebox.showerror("Error", info)
 
         self._audio_recognition_cancellation_token.clear()
         threading.Thread(
             target=self._voice_recognition.loop,
-            args=(self._audio_source_combox.get(), self._voice_data_queue.put, log_handler, self._audio_recognition_cancellation_token),
+            args=(self._audio_source_combox.get(), self._voice_data_queue.put, error_handler, self._audio_recognition_cancellation_token),
             daemon=True,
         ).start()
 
@@ -194,20 +207,46 @@ class TalkHelperApp(tk.Tk):
         self._audio_recognition_data.clear()
         self._audio_recognition_data[-1] = full_text
 
-    def _pull_voice_data(self):
+    async def _pull_voice_data(self):
+        was_empty = True
         while not self._voice_data_queue.empty():
+            was_empty = False
             data = self._voice_data_queue.get_nowait()
-            self._audio_recognition_data[data.id] = data.text.lower()
+            if data.is_endpoint:
+                recent_recognition_data = [item for item in self._audio_recognition_data.values()][-5:]
+                recent_speech = ''.join(item.speech for item in recent_recognition_data)
 
-        full_text = ""
-        for text in self._audio_recognition_data.values():
-            full_text+=text
-        self._speech_panel.clear()
-        self._speech_panel.append(full_text[-AutoScrollText_MAX_CHARS:]) 
+                def error_handler(info):
+                    messagebox.showerror("Error", info)
+                translation = await self._speech_translation_advisor.translate(recent_speech, data.text, error_handler)
+                advice = await self._speech_translation_advisor.get_speaking_advice(recent_speech, data.text, error_handler)
 
-        self.after(RECOGNITION_DATA_PULLING_RATE, self._pull_voice_data)
+                self._audio_recognition_data[data.id] = SpeechTranslationAdvice(data.text.lower(), translation, advice)
+            else:
+                self._audio_recognition_data[data.id] = SpeechTranslationAdvice(speech=data.text.lower())
+            
+        if not was_empty:
+            full_speech_text = ""
+            full_translation_text = ""
+            full_advice_text = ""
+            for text in self._audio_recognition_data.values():
+                full_speech_text+=text.speech
+                full_translation_text+=text.translation
+                full_advice_text+=text.advice
+
+            self._speech_panel.clear()
+            self._speech_panel.append(full_speech_text[-AutoScrollText_MAX_CHARS:]) 
+
+            self._translation_panel.clear()
+            self._translation_panel.append(full_translation_text[-AutoScrollText_MAX_CHARS:]) 
+
+            self._advice_panel.clear()
+            self._advice_panel.append(full_advice_text[-AutoScrollText_MAX_CHARS:]) 
+            
+        await asyncio.sleep(RECOGNITION_DATA_PULLING_RATE)
+        asyncio.create_task(self._pull_voice_data())
 
     def _clear_all_button_handler(self):
-        self._audio_recognition_data.clear()
-        for panel in (self._speech_panel, self._translation_panel, self._tips_panel):
+        for panel in (self._speech_panel, self._translation_panel, self._advice_panel):
             panel.clear()
+        self._audio_recognition_data.clear()

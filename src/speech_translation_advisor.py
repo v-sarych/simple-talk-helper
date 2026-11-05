@@ -1,17 +1,44 @@
 from config_descriptioin import LLMConfig
 from queue import Queue 
-import threading
+from openai import AsyncOpenAI
 
 class SpeechTranslationAdvisor:
     _llm_config: LLMConfig
+    _client: AsyncOpenAI
+
     def __init__(self, llm_config: LLMConfig):
-        _llm_config = llm_config
+        self._llm_config = llm_config
+        self._client = AsyncOpenAI(
+            base_url=llm_config.base_url,
+            api_key=llm_config.api_key,
+        )
 
-    # def loop(speech_queue: Queue, translation_callback, advice_callback, cancellation_token: threading.Event):
-    #     pass
+    async def translate(self, context:str, text:str, error_callback) -> str:
+        result = ""
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._llm_config.model,
+                messages=[{"role": "system", "content": self._llm_config.translator_prompt + context + "\nText: " + text}],
+                max_tokens=self._llm_config.max_tokens,
+                reasoning_effort="none"
+            )
+            result = response.choices[0].message.content
+        except Exception as e:
+            error_callback(f"LLM error: {e}")
+            
+        return result
+    
+    async def get_speaking_advice(self, context:str, text:str, error_callback) -> str:
+        result = ""
+        try:
+            response = await self._client.chat.completions.create(
+                model=self._llm_config.model,
+                messages=[{"role": "system", "content": self._llm_config.advisor_prompt + context + "\nText: " + text}],
+                max_tokens=self._llm_config.max_tokens,
+                reasoning_effort="none"
+            )
+            result = response.choices[0].message.content
+        except Exception as e:
+            error_callback(f"LLM error: {e}")
 
-    def translate(text:str):
-        pass
-
-    def get_speaking_advice(text:str):
-        pass
+        return result

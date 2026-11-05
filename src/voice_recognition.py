@@ -12,6 +12,7 @@ from config_descriptioin import ASRConfig, AudioConfig, SherpaOnnxConfig
 class RecognizedTextBatch:
     id: int
     text: str
+    is_endpoint: bool = False
 
 class VoiceRecognition:
     _asr_config: ASRConfig
@@ -47,14 +48,12 @@ class VoiceRecognition:
         )
 
 
-    def loop(self, device: str, voice_recognized_callback, log_callback, cancellation_token: threading.Event):
+    def loop(self, device: str, voice_recognized_callback, error_callback, cancellation_token: threading.Event):
         _audio_queue = Queue()
-        
-        voice_recognized_callback(RecognizedTextBatch(0, "\nAudio loop started\n"))
         
         threading.Thread(
             target=self._recognition_loop,
-            args=(_audio_queue, voice_recognized_callback, log_callback, cancellation_token),
+            args=(_audio_queue, voice_recognized_callback, error_callback, cancellation_token),
             daemon=True,
         ).start()
 
@@ -62,23 +61,22 @@ class VoiceRecognition:
         try:
             with audio_source.recorder(self._audio_config.sample_rate, 2 if audio_source.isloopback else 1, self._audio_config.block_size) as recorder:
                 while not cancellation_token.is_set():
-
                     recorded_data = recorder.record(self._audio_config.block_size)
                     if audio_source.isloopback:# lobback bag(in windows mostly), to fix i do stereo capture and combine into mono for recognition
                         recorded_data = recorded_data.mean(axis=1).reshape(-1, 1).astype(np.float32) 
 
                     _audio_queue.put(recorded_data)
         except Exception as e:
-            log_callback("Recognition loop crashed: " + e.with_traceback())
+            cancellation_token.set()
+            error_callback(f"Recognition loop crashed: {e}")
 
             
-    def _recognition_loop(self, _audio_queue: Queue, voice_recognized_callback, log_callback, cancellation_token: threading.Event):
-        voice_recognized_callback(RecognizedTextBatch(1, "Recognition loop started\n"))
-
+    def _recognition_loop(self, _audio_queue: Queue, voice_recognized_callback, error_callback, cancellation_token: threading.Event):
         recognizing_stream: sherpa_onnx.OnlineStream = self._sherpa_recognizer.create_stream()
         resampler = soxr.ResampleStream(self._audio_config.sample_rate, self._asr_config.sherpa_onnx.sample_rate, 1, dtype='float32')
         
-        endpoint_id = 2
+        endpoint_id = 0
+        previous_partial_text = ""
         while not cancellation_token.is_set():
             audio_batches = []
             while not _audio_queue.empty():
@@ -96,12 +94,13 @@ class VoiceRecognition:
                 if self._sherpa_recognizer.is_endpoint(recognizing_stream):
                     final_text = self._sherpa_recognizer.get_result(recognizing_stream)
                     if final_text:
-                        voice_recognized_callback(RecognizedTextBatch(endpoint_id, final_text + "<>"))
+                        voice_recognized_callback(RecognizedTextBatch(endpoint_id, final_text + "<>", True))
                         endpoint_id += 1
                     self._sherpa_recognizer.reset(recognizing_stream)
                 else:
                     partial_text = self._sherpa_recognizer.get_result(recognizing_stream)
-                    if partial_text:
+                    if partial_text and previous_partial_text != partial_text:
+                           previous_partial_text = partial_text
                            voice_recognized_callback(RecognizedTextBatch(endpoint_id, partial_text))
 
             time.sleep(0.03)

@@ -22,12 +22,11 @@
     "block_size": 1024
   },
   "llm": {
-    "api_key": "",
-    "base_url": "https://api.gptunnel.ru/v1",
-    "model": "gpt-4o-mini",
-    "temperature": 0.7,
+    "api_key": "shds-b3IMUtjFBR0zXEChjsPj2riPPAU",
+    "base_url": "https://gptunnel.ru/v1",
+    "model": "glm-5.3-flash",
     "max_tokens": 10000,
-    "translator_prompt":"",
-    "advisor_prompt": ""
+    "translator_prompt":"Selected language: Russian.\nTranslate batch on selected language depending on context if it exist, give only translation, nothing more\n Context:",
+    "advisor_prompt": "Selected language: Russian.\nGet talking tips depending on context if it exist and current text batch. Tips in form {word on text language} [{transcription(text language)}] - {translation on selected language}, give no more than 5, give only blocks in format, no additional text\n Context:"
   }
 }
