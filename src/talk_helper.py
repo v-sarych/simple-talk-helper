@@ -201,9 +201,11 @@ class TalkHelperApp(tk.Tk):
         self._audio_recognition_cancellation_token.set()
         time.sleep(0.2)#waiting until all threads finish and all queues have been handled
 
-        full_text = ""
+        full_text = SpeechTranslationAdvice()
         for text in self._audio_recognition_data.values():
-            full_text += text
+            full_text.speech += text.speech
+            full_text.advice += text.advice
+            full_text.translation += text.translation
         self._audio_recognition_data.clear()
         self._audio_recognition_data[-1] = full_text
 
