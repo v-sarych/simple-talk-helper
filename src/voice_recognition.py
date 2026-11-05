@@ -1,5 +1,6 @@
 import time
 import soundcard
+import soxr
 import numpy as np
 import threading
 import sherpa_onnx
@@ -67,44 +68,43 @@ class VoiceRecognition:
                         recorded_data = recorded_data.mean(axis=1).reshape(-1, 1).astype(np.float32) 
 
                     _audio_queue.put(recorded_data)
-        except:
-            log_callback("Audio stream opening error, probably unsupported sample rate")
+        except Exception as e:
+            log_callback("Recognition loop crashed: " + e.with_traceback())
 
             
     def _recognition_loop(self, _audio_queue: Queue, voice_recognized_callback, log_callback, cancellation_token: threading.Event):
         voice_recognized_callback(RecognizedTextBatch(1, "Recognition loop started\n"))
 
         recognizing_stream: sherpa_onnx.OnlineStream = self._sherpa_recognizer.create_stream()
+        resampler = soxr.ResampleStream(self._audio_config.sample_rate, self._asr_config.sherpa_onnx.sample_rate, 1, dtype='float32')
         
-        with soundcard.default_speaker().player(self._audio_config.sample_rate, 1, self._audio_config.block_size) as speaker:
-            endpoint_id = 2
-            while not cancellation_token.is_set():
-                audio_batches = []
-                while not _audio_queue.empty():
-                    audio_batches.append(_audio_queue.get_nowait())
+        endpoint_id = 2
+        while not cancellation_token.is_set():
+            audio_batches = []
+            while not _audio_queue.empty():
+                audio_batches.append(_audio_queue.get_nowait())
 
-                if len(audio_batches) > 0:
-                    audio_batch = audio_batches[0] if len(audio_batches) == 1 else np.concatenate(audio_batches, axis=0)
-                    #speaker.play(audio_batch)
+            if len(audio_batches) > 0:
+                audio_batch = audio_batches[0] if len(audio_batches) == 1 else np.concatenate(audio_batches, axis=0)
+                audio_batch = audio_batch.flatten().astype(np.float32)
+                audio_batch = resampler.resample_chunk(audio_batch)
 
-                    audio_batch = audio_batch.flatten().astype(np.float32)
+                recognizing_stream.accept_waveform(self._asr_config.sherpa_onnx.sample_rate, audio_batch)
+                while self._sherpa_recognizer.is_ready(recognizing_stream):
+                    self._sherpa_recognizer.decode_stream(recognizing_stream)
 
-                    recognizing_stream.accept_waveform(self._asr_config.sherpa_onnx.sample_rate, audio_batch)
-                    while self._sherpa_recognizer.is_ready(recognizing_stream):
-                        self._sherpa_recognizer.decode_stream(recognizing_stream)
+                if self._sherpa_recognizer.is_endpoint(recognizing_stream):
+                    final_text = self._sherpa_recognizer.get_result(recognizing_stream)
+                    if final_text:
+                        voice_recognized_callback(RecognizedTextBatch(endpoint_id, final_text + "<>"))
+                        endpoint_id += 1
+                    self._sherpa_recognizer.reset(recognizing_stream)
+                else:
+                    partial_text = self._sherpa_recognizer.get_result(recognizing_stream)
+                    if partial_text:
+                           voice_recognized_callback(RecognizedTextBatch(endpoint_id, partial_text))
 
-                    if self._sherpa_recognizer.is_endpoint(recognizing_stream):
-                        final_text = self._sherpa_recognizer.get_result(recognizing_stream)
-                        if final_text:
-                            voice_recognized_callback(RecognizedTextBatch(endpoint_id, final_text + "<>"))
-                            self._sherpa_recognizer.reset(recognizing_stream)
-                            endpoint_id += 1
-                    else:
-                        partial_text = self._sherpa_recognizer.get_result(recognizing_stream)
-                        if partial_text:
-                            voice_recognized_callback(RecognizedTextBatch(endpoint_id, partial_text))
-
-                time.sleep(0.03)
+            time.sleep(0.03)
 
                     
 
