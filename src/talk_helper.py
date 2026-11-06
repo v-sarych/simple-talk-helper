@@ -220,8 +220,10 @@ class TalkHelperApp(tk.Tk):
 
                 def error_handler(info):
                     messagebox.showerror("Error", info)
-                translation = await self._speech_translation_advisor.translate(recent_speech, data.text, error_handler)
-                advice = await self._speech_translation_advisor.get_speaking_advice(recent_speech, data.text, error_handler)
+                # translation = await self._speech_translation_advisor.translate(recent_speech, data.text, error_handler)
+                # advice = await self._speech_translation_advisor.get_speaking_advice(recent_speech, data.text, error_handler)
+                translation = ""
+                advice = ""
 
                 self._audio_recognition_data[data.id] = SpeechTranslationAdvice(data.text.lower(), translation, advice)
             else:
