@@ -22,7 +22,7 @@
     "block_size": 1024
   },
   "llm": {
-    "api_key": "",
+    "api_key": "shds-RQfop7PZPIrG70k5H5LUIsxBtzp",
     "base_url": "https://gptunnel.ru/v1",
     "model": "glm-5.3-flash",
     "max_tokens": 10000,
