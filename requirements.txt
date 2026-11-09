@@ -1,9 +1,20 @@
+# Python 3.11+ (проверено на 3.14)
+
 # Захват звука: микрофоны и loopback десктопа (soundcard)
 numpy>=1.26
 soundcard>=0.4.6
 
+# Ресемплинг аудио перед отправкой в распознаватель (soxr)
+soxr>=1.1
+
 # Распознавание речи (streaming ASR)
 sherpa-onnx>=2.0
+
+# LLM: перевод и советы по речи (OpenAI-совместимый API)
+openai>=1.66
+
+# Интеграция asyncio с event loop tkinter (async_mainloop)
+async-tkinter-loop>=0.10.4
 
 # UI
 # tkinter входит в стандартную библиотеку Python
