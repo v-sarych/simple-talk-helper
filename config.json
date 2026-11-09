@@ -24,7 +24,7 @@
   "llm": {
     "api_key": "",
     "base_url": "https://gptunnel.ru/v1",
-    "model": "glm-5.3-flash",
+    "model": "grom-16k",
     "max_tokens": 10000,
     "translator_prompt":"Selected language: Russian.\nTranslate batch on selected language depending on context if it exist, give only translation, nothing more\n Context:",
     "advisor_prompt": "Selected language: Russian.\nGet talking tips depending on context if it exist and current text batch. Tips in form {word on text language} [{transcription(text language)}] - {translation on selected language}, give no more than 5, give only blocks in format, no additional text, if not enough info dont give any info\n Context:"

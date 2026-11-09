@@ -15,6 +15,7 @@ class SpeechTranslationAdvisor:
 
     async def translate(self, context:str, text:str, error_callback) -> str:
         result = ""
+        print("llm requested")
         try:
             response = await self._client.chat.completions.create(
                 model=self._llm_config.model,
@@ -25,11 +26,14 @@ class SpeechTranslationAdvisor:
             result = response.choices[0].message.content
         except Exception as e:
             error_callback(f"LLM error: {e}")
+        
+        print("llm responsed successfully")
             
         return result
     
     async def get_speaking_advice(self, context:str, text:str, error_callback) -> str:
         result = ""
+        print("llm requested")
         try:
             response = await self._client.chat.completions.create(
                 model=self._llm_config.model,
@@ -40,5 +44,7 @@ class SpeechTranslationAdvisor:
             result = response.choices[0].message.content
         except Exception as e:
             error_callback(f"LLM error: {e}")
+
+        print("llm responsed successfully")
 
         return result
