@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 RECOGNITION_DATA_PULLING_RATE = 0.08
 
-ADVISOR_CALL_RATE = 0.8
+ADVISOR_CALL_RATE = 0.5
 
 AutoScrollText_MAX_CHARS = 2000
 
@@ -32,9 +32,13 @@ class TalkHelperApp(tk.Tk):
     _translation_panel: AutoScrollText
     _advice_panel: AutoScrollText
     _audio_source_combox: ttk.Combobox
-    _voice_data_queue: Queue
+
+    _voice_data_queue_for_speech: Queue
+    _voice_data_queue_for_advisor: Queue
+
     _audio_recognition_data: dict[int, SpeechTranslationAdvice]
     _speech_translation_advisor : SpeechTranslationAdvisor
+
     def __init__(self, app_config: AppConfig):
         super().__init__()
 
@@ -42,7 +46,8 @@ class TalkHelperApp(tk.Tk):
         self._audio_recognition_cancellation_token.set()
 
         self._audio_recognition_data = dict()
-        self._voice_data_queue = Queue()
+        self._voice_data_queue_for_speech = Queue()
+        self._voice_data_queue_for_advisor = Queue()
         self._voice_recognition = VoiceRecognition(app_config.asr, app_config.audio)
         self._speech_translation_advisor = SpeechTranslationAdvisor(app_config.llm)
 
@@ -52,7 +57,8 @@ class TalkHelperApp(tk.Tk):
         self.after(200, self._start_async_tasks)
 
     def _start_async_tasks(self):#no concurency in this tasks, because only 1 thread used, in await asyncio guarantee returning to main thread
-        asyncio.create_task(self._pull_voice_data())
+        asyncio.create_task(self._pull_voice_data_speech())
+        asyncio.create_task(self._pull_voice_data_advisor())
 
     def _init_ui(self):
         self.title("simple-talk-helper")
@@ -192,12 +198,16 @@ class TalkHelperApp(tk.Tk):
             return
 
         def error_handler(info):
-            messagebox.showerror("Error", info)
+            messagebox.showerror("Error", info)\
+
+        def put_in_queues(data):
+            self._voice_data_queue_for_speech.put(data)    
+            self._voice_data_queue_for_advisor.put(data)    
 
         self._audio_recognition_cancellation_token.clear()
         threading.Thread(
             target=self._voice_recognition.loop,
-            args=(self._audio_source_combox.get(), self._voice_data_queue.put, error_handler, self._audio_recognition_cancellation_token),
+            args=(self._audio_source_combox.get(), put_in_queues, error_handler, self._audio_recognition_cancellation_token),
             daemon=True,
         ).start()
 
@@ -213,51 +223,63 @@ class TalkHelperApp(tk.Tk):
         self._audio_recognition_data.clear()
         self._audio_recognition_data[-1] = full_text
 
-    async def _pull_voice_data(self):
+    async def _pull_voice_data_speech(self):
         was_empty = True
-        while not self._voice_data_queue.empty():
+        while not self._voice_data_queue_for_speech.empty():
             was_empty = False
-            data = self._voice_data_queue.get_nowait()
-            if data.is_endpoint or (self._voice_data_queue.empty() and time.time() - self.last_advisor_call > ADVISOR_CALL_RATE 
+            data = self._voice_data_queue_for_speech.get_nowait()
+            if data.id in self._audio_recognition_data:
+                self._audio_recognition_data[data.id].speech = data.text
+            else:
+                self._audio_recognition_data[data.id] = SpeechTranslationAdvice(speech=data.text)
+            
+        if not was_empty:
+            full_speech_text = ""
+            for text in self._audio_recognition_data.values():
+                full_speech_text+=text.speech
+
+            self._speech_panel.clear()
+            self._speech_panel.append(full_speech_text[-AutoScrollText_MAX_CHARS:]) 
+
+            print("speech panel updated")
+            
+        await asyncio.sleep(RECOGNITION_DATA_PULLING_RATE)
+        asyncio.create_task(self._pull_voice_data_speech())
+
+    async def _pull_voice_data_advisor(self):
+        while not self._voice_data_queue_for_advisor.empty():
+            data = self._voice_data_queue_for_advisor.get_nowait()
+            if data.is_endpoint or (self._voice_data_queue_for_advisor.empty() and time.time() - self.last_advisor_call > ADVISOR_CALL_RATE 
                                     and data.id in self._audio_recognition_data and data != self._audio_recognition_data[data.id].speech):
-                recent_recognition_data = [item for item in self._audio_recognition_data.values()][-5:]
-                recent_speech = ''.join(item.speech for item in recent_recognition_data)
+                recent_recognition_data = [item for item in self._audio_recognition_data.values()]#fix
+                recent_speech = ''.join(item.speech for item in recent_recognition_data[-5:])
 
                 def error_handler(info):
                     messagebox.showerror("Error", info)
                 translation, advice = await asyncio.gather(self._speech_translation_advisor.translate(recent_speech, data.text, error_handler), 
                                                     self._speech_translation_advisor.get_speaking_advice(recent_speech, data.text, error_handler))
-                
-                self._audio_recognition_data[data.id] = SpeechTranslationAdvice(data.text, "<>" + translation, advice)
                 self.last_advisor_call = time.time()
-            else:
-                if data.id in self._audio_recognition_data:
-                    self._audio_recognition_data[data.id].speech = data.text
-                else:
-                    self._audio_recognition_data[data.id] = SpeechTranslationAdvice(speech=data.text)
-            
-        if not was_empty:
-            full_speech_text = ""
-            full_translation_text = ""
-            full_advice_text = ""
-            for text in self._audio_recognition_data.values():
-                full_speech_text+=text.speech
-                full_translation_text+=text.translation
-                full_advice_text+=text.advice
+                
+                if data.id in self._audio_recognition_data:# second check because of await, clear function for example can clear whole dict
+                    self._audio_recognition_data[data.id].translation = "<>" + translation
+                    self._audio_recognition_data[data.id].advice = "\n" + advice
 
-            self._speech_panel.clear()
-            self._speech_panel.append(full_speech_text[-AutoScrollText_MAX_CHARS:]) 
+                full_translation_text = ""
+                full_advice_text = ""
+                for text in recent_recognition_data:
+                    full_translation_text+=text.translation
+                    full_advice_text+=text.advice
 
-            self._translation_panel.clear()
-            self._translation_panel.append(full_translation_text[-AutoScrollText_MAX_CHARS:]) 
+                self._translation_panel.clear()
+                self._translation_panel.append(full_translation_text[-AutoScrollText_MAX_CHARS:]) 
 
-            self._advice_panel.clear()
-            self._advice_panel.append(full_advice_text[-AutoScrollText_MAX_CHARS:]) 
+                self._advice_panel.clear()
+                self._advice_panel.append(full_advice_text[-AutoScrollText_MAX_CHARS:]) 
 
-            print("panels updated")
+                print("translation advisor panels updated")
             
         await asyncio.sleep(RECOGNITION_DATA_PULLING_RATE)
-        asyncio.create_task(self._pull_voice_data())
+        asyncio.create_task(self._pull_voice_data_advisor())
 
     def _clear_all_button_handler(self):
         for panel in (self._speech_panel, self._translation_panel, self._advice_panel):
