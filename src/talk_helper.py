@@ -14,7 +14,7 @@ RECOGNITION_DATA_PULLING_RATE = 0.08
 
 ADVISOR_CALL_RATE = 0.5
 
-AutoScrollText_MAX_CHARS = 2000
+AutoScrollText_MAX_CHARS = 4000
 
 
 @dataclass
@@ -239,7 +239,10 @@ class TalkHelperApp(tk.Tk):
                 full_speech_text+=text.speech
 
             self._speech_panel.clear()
-            self._speech_panel.append(full_speech_text[-AutoScrollText_MAX_CHARS:]) 
+            self._speech_panel.append(full_speech_text) 
+
+            if len(full_speech_text) >= AutoScrollText_MAX_CHARS:
+                self.clear_half_audio_recognition_data()
 
             print("speech panel updated")
             
@@ -271,15 +274,21 @@ class TalkHelperApp(tk.Tk):
                     full_advice_text+=text.advice
 
                 self._translation_panel.clear()
-                self._translation_panel.append(full_translation_text[-AutoScrollText_MAX_CHARS:]) 
+                self._translation_panel.append(full_translation_text) 
 
                 self._advice_panel.clear()
-                self._advice_panel.append(full_advice_text[-AutoScrollText_MAX_CHARS:]) 
+                self._advice_panel.append(full_advice_text) 
 
                 print("translation advisor panels updated")
             
         await asyncio.sleep(RECOGNITION_DATA_PULLING_RATE)
         asyncio.create_task(self._pull_voice_data_advisor())
+
+    def clear_half_audio_recognition_data(self):
+        keys = list(self._audio_recognition_data.keys())
+        for key in keys[:len(keys) // 2]:
+            del self._audio_recognition_data[key]
+        print("clear_half_audio_recognition_data")
 
     def _clear_all_button_handler(self):
         for panel in (self._speech_panel, self._translation_panel, self._advice_panel):
